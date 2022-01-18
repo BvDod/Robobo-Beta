@@ -36,11 +36,9 @@ class BetaRobot:
         # The relative speed of the tires when making specific moves
         self.moves = {
             "hardLeft" : (0.1, 1),
-            "left" : (0.25, 1),
             "slowLeft" : (0.05, 0.5),
             "straight" : (1, 1),
             "slowRight" : (0.5, 0.05),
-            "right" : (1, 0.25),
             "hardRight" : (1, 0.1),
             "stop" : (0, 0),
         }
@@ -113,9 +111,18 @@ class BetaRobot:
         """Function used to read and transform the IR"""
         values = np.log(np.array(self.rob.read_irs()[3:]))/10 * -1
         values[values == np.inf] = 0
-        values = reversed(values)
+        values = list(reversed(values))
+        if not all([value == 0 for value in values]):
+            values = self.normalizeIRVector(values)
+        print(values)
         return values
 
+    def normalizeIRVector(self, vector):
+        """ Applies vector normalization """
+        norm = np.linalg.norm(vector)
+        normal_array = vector/norm
+        print(normal_array)
+        return normal_array
     
     def getFitness(self):
         """ Get current fitness of the robot """
@@ -327,12 +334,15 @@ def main():
     robot.resetRobot()
     robot.makeMove("stop")
     i = 0
+    start_time = time.time()
     while True:
         i += 1
         robot.executeBaseline()
         robot.getFitness()
         robot.checkIfStuck()
         robot.updateEvalStats()
+        if time.time() - start_time > 1:
+            exit()
 
 
 
