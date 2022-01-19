@@ -25,26 +25,36 @@ class BetaRobot:
         self.TotalIterations = 0
         
         # Parameters
-        self.maxSpeed = 50          # Should be between 0 and 100, used to scale the "moves"
+        self.maxSpeed = 25          # Should be between 0 and 100, used to scale the "moves"
         self.collidingDistance = 0.035       # Distance from which we count something as a collision
         self.maxDetectableDistance = 0.20   # Dont measure distance to obstacle above this, defined in vrep also!
-        self.update_interval = 1000/30      # ms the robot should read sensors and move (1000/30 = 30hz for example)
+        self.update_interval = 1000/8     # ms the robot should read sensors and move (1000/30 = 30hz for example)
 
         # Paramters for reseting env if robot stuck
-        self.terminateDuration = 100        # Amount of iterations after which we reset environment if no movement seen
-        self.terminateDisplacement = 0.02   # Amount of displacement we consider "no movement"
+        self.terminateDuration = 150       # Amount of iterations after which we reset environment if no movement seen
+        self.terminateDisplacement = 0.005  # Amount of displacement we consider "no movement"
         self.terminateDisplacement *= (self.maxSpeed/100)
 
         # The relative speed of the tires when making specific moves
         self.moves = {
-            "hardLeft" : (0.1, 1),
-            "slowLeft" : (0.05, 0.5),
+            "fullLeft" : (-0.25, 0.5),
+            "halfLeft" : (-0.25, 0.5),
             "straight" : (1, 1),
-            "slowRight" : (0.5, 0.05),
-            "hardRight" : (1, 0.1),
+            "halfRight" : (0.5, -0.25),
+            "fullRight" : (0.5, -0.25),
             "stop" : (0, 0),
         }
-        self.minTotalSpeed = self.moves["hardLeft"][0] + self.moves["hardLeft"][1]  # Min total speed we use to scale fitness so it is in the range of 0 to 1
+
+        self.moves_length = {
+            "fullLeft" : 2000,
+            "halfLeft" : 1000,
+            "straight" : 500,
+            "halfRight" : 1000,
+            "fullRight" : 2000,
+            "stop" : 500,
+        }
+
+        self.int_to_moves = {0: "fullLeft", 1:"halfLeft", 2:"straight", 3:"halfRight", 4: "fullRight"}
     
         # Ids of objects to use with api
         self.objectHandles, self.distanceHandles = self.getAllHandles()
@@ -66,6 +76,7 @@ class BetaRobot:
         self.CollisionRate = []
         self.WheelSpeedSum = 0
         self.AvgWheelSpeed = []
+        self.consecutiveCollision = 0
 
 
         # Location and angles of starting positions that work
@@ -77,44 +88,44 @@ class BetaRobot:
         [[-0.5660457988203468, -1.3148253477324483, 0.25], [-0.16884032293871787, 0, 0]],
         [[0.5617552702981955, -0.017153199243642312, 0.25], [0.36331885824583976, 0, 0]],
         [[0.7876358767404442, -0.5243433050741434, 0.25], [-0.030591235493026225, 0, 0]],
-        [[1.1896358921746308, 0.847313529094192, 0.25], [2.8113054256017014, 0, 0]],
         [[-0.8498098565039783, 1.4949962169182174, 0.25], [-0.4626504830438387, 0, 0]],
-        [[-0.2679697996849625, -0.6932055923925232, 0.25], [0.6212445731193044, 0, 0]],
-        [[-1.7150302004214026, 0.39975884625055136, 0.25], [3.081162935268452, 0, 0]],
         [[-1.6839245043784712, -0.30083414218809573, 0.25], [1.455193192961179, 0, 0]],
         [[-0.5318329738725882, -0.5227905118361207, 0.25], [1.5674624045287064, 0, 0]],
         [[-0.10064955234833874, -0.6907052118532505, 0.25], [0.9667288710305453, 0, 0]],
         [[1.2802100353798298, 0.28901793185901054, 0.25], [1.5960659102294805, 0, 0]],
         [[-1.2114305718894163, 0.4153677616138217, 0.25], [-1.752219097786276, 0, 0]],
-        [[0.2560259236324979, -0.2617935404828697, 0.25], [-0.0029854381520393325, 0, 0]],
-        [[0.26976920252563297, -1.4584645864720112, 0.25], [-1.9700311533187507, 0, 0]],]
+        [[0.2560259236324979, -0.2617935404828697, 0.25], [-0.0029854381520393325, 0, 0]],]
 
         
 
-    def makeMove(self, move):
+    def makeMove(self, move, dontIterate=False):
         """ Function used to execute one of the predefined moves (see self.moves in __init__())"""
-        self.TotalIterations += 1
-        if not move == self.lastMove:
-            if move not in self.moves:
-                print("Error: move does not exist")
-            
-            base_speed = (self.maxSpeed, self.maxSpeed)
-            # Calculate speed of left and right tire and execute move
-            move_speed_multiplier = self.moves[move]
-            speed_left, speed_right = base_speed[0] * move_speed_multiplier[0], base_speed[1] * move_speed_multiplier[1]
-            self.rob.move(speed_left, speed_right, self.update_interval, dontWait=True)
-            
-            self.lastSpeed = (speed_left, speed_right)
-            self.lastMove = move
-        time.sleep(self.update_interval/1000)
+        if not dontIterate:
+            self.TotalIterations += 1
+
+        if type(move) != str:
+            move = self.int_to_moves[move]
+
+        
+        if move not in self.moves:
+            print("Error: move does not exist")
+        
+        base_speed = (self.maxSpeed, self.maxSpeed)
+        # Calculate speed of left and right tire and execute move
+        move_speed_multiplier = self.moves[move]
+        speed_left, speed_right = base_speed[0] * move_speed_multiplier[0], base_speed[1] * move_speed_multiplier[1]
+        self.rob.move(speed_left, speed_right, self.moves_length[move])
+        
+        self.lastSpeed = (speed_left, speed_right)
+        self.lastMove = move
     
 
     def readIR(self):
         """Function used to read and transform the IR"""
         values = np.log(np.array(self.rob.read_irs()[3:]))/10 * -1
         values[values == np.inf] = 0
-        values = list(reversed(values))
-        if not all([value == 0 for value in values]):
+        values = np.flipud(values)
+        if not np.all(values == 0):
             values = self.normalizeIRVector(values)
         return values
 
@@ -130,11 +141,12 @@ class BetaRobot:
         totalSpeed = self.lastSpeed[0] + self.lastSpeed[1]
 
         # Fitness has 3 different components
-        speedFitness = ((totalSpeed - (self.minTotalSpeed * self.maxSpeed)) / (self.maxSpeed * 2))   # range is 0 to 1
-        distanceFitness = distanceToClosest / self.maxDetectableDistance    # range is 0 to 1
-        collisionFitness = (not isColliding) * 5
+        speedFitness = int(self.lastMove == "straight")*4 + -2   # range is -2 to 2
+        distanceFitness = (distanceToClosest / self.maxDetectableDistance) * 2    # range is 0 to 1
+        # collisionFitness = (isColliding) * -20
 
-        fitness = speedFitness + distanceFitness + collisionFitness
+        fitness = speedFitness + distanceFitness
+        return fitness
 
     def updateAvgDisplacement(self):
         """ Update the moving average of the displacement of the robot """
@@ -145,13 +157,13 @@ class BetaRobot:
     def checkIfStuck(self):
         """ Check if robot has been stuck somewhere for too long, reset environment if this is the case """
         self.updateAvgDisplacement()
-        if self.positionIterations % 5 == 0:
-            pass
-            # print("Average displ: " + str(self.averageDisplacement))
         if self.positionIterations > self.terminateDuration:
             if self.averageDisplacement < self.terminateDisplacement:
                 print("Robot is stuck, resetting...")
-                self.resetRobot()
+                return True
+        if self.consecutiveCollision >= 5:
+            return True
+        return False
     
 
     def resetRobot(self):
@@ -168,7 +180,7 @@ class BetaRobot:
         print("Randomzing starting location, starting location and angle: ")
         print(location, angle)
         print()
-        
+
         self.setStartLocation(location)
         angle[1] += 0.5*math.pi
         self.setStartAngle(angle)
@@ -184,9 +196,11 @@ class BetaRobot:
         self.lastPosition = [0, 0]
         self.averageDisplacement = 0
         self.positionIterations = 0
+        self.consecutiveCollision = 0
+
         
-        for i in range(30):
-            self.makeMove("stop")
+        for i in range(5):
+            self.makeMove("stop", dontIterate=True)
         
         self.rob.wait_for_ping()
     
@@ -247,10 +261,14 @@ class BetaRobot:
             distance = self.maxDetectableDistance   # reduce this to max detectable distance
 
         if distance < self.collidingDistance:
-            print("Obstacle Touched")
+            if self.lastMove == "straight":
+                self.consecutiveCollision += 1
+            else:
+                self.consecutiveCollision += 2.5
             self.isColliding = True
             return distance, True
         self.isColliding = False
+        self.consecutiveCollision = 0
         return distance, False
     
 
@@ -276,9 +294,9 @@ class BetaRobot:
             move = "straight"
         else:
             if sum(sensor_values[0:2]) > sum(sensor_values[3:]):  
-                move = "slowRight"
+                move = "halfRight"
             else:
-                move = "slowLeft"
+                move = "halfLeft"
         self.makeMove(move)
     
     def updateEvalStats(self):
