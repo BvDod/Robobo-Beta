@@ -32,7 +32,7 @@ class BetaRobot:
         self.TotalIterations = 0
         
         # Parameters
-        self.maxSpeed = 25          # Should be between 0 and 100, used to scale the "moves"
+        self.maxSpeed = 15         # Should be between 0 and 100, used to scale the "moves"
         self.collidingDistance = 0.035       # Distance from which we count something as a collision
         self.maxDetectableDistance = 0.20   # Dont measure distance to obstacle above this, defined in vrep also!
         self.update_interval = 1000/8     # ms the robot should read sensors and move (1000/30 = 30hz for example)
