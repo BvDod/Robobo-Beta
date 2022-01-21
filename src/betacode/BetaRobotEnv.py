@@ -8,7 +8,6 @@ import numpy as np
 import gym
 from gym import spaces
 
-from stable_baselines3.common.env_checker import check_env
 
 
 def terminate_program(signal_number, frame):
@@ -22,21 +21,31 @@ class BetaRobotEnv(gym.Env):
 
         self.robot.resetRobot()
     
-        self.action_space = spaces.Discrete(5)
-        self.observation_space = spaces.Box(low=0, high=np.inf,
-                                            shape=(5,), dtype=np.float32)
+        self.action_space = spaces.Discrete(3)
+        self.observation_space = spaces.Discrete(6)
     
     def reset(self):
         self.robot.resetRobot()
         observation =  self.robot.readIR()
+
+        if np.all(observation == 0):
+            observation = 5
+        else:
+            observation = np.argmax(observation)
+
         return observation
     
     def step(self, action):
-
         self.robot.makeMove(action)
         reward = self.robot.getFitness()
         isStuck = self.robot.checkIfStuck()
         observation =  self.robot.readIR()
+
+        # Disctresize observation
+        if np.all(observation == 0):
+            observation = 5
+        else:
+            observation = np.argmax(observation)
         self.robot.updateEvalStats()
 
         if isStuck:
