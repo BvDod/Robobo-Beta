@@ -37,24 +37,24 @@ class BetaRobot:
 
         # The relative speed of the tires when making specific moves
         self.moves = {
-            "fullLeft" : (-0.25, 0.5),
-            "halfLeft" : (-0.25, 0.5),
+            "fullLeft" : (-0.4, 0.5),
+            "halfLeft" : (-0.4, 0.5),
             "straight" : (1, 1),
-            "halfRight" : (0.5, -0.25),
-            "fullRight" : (0.5, -0.25),
+            "halfRight" : (0.5, -0.4),
+            "fullRight" : (0.5, -0.4),
             "stop" : (0, 0),
         }
 
         self.moves_length = {
             "fullLeft" : 2000,
             "halfLeft" : 1000,
-            "straight" : 500,
+            "straight" : 1000,
             "halfRight" : 1000,
             "fullRight" : 2000,
             "stop" : 500,
         }
 
-        self.int_to_moves = {0: "fullLeft", 1:"halfLeft", 2:"straight", 3:"halfRight", 4: "fullRight"}
+        self.int_to_moves = {0: "fullLeft", 1:"straight", 2: "fullRight"}
     
         # Ids of objects to use with api
         self.objectHandles, self.distanceHandles = self.getAllHandles()
@@ -294,9 +294,9 @@ class BetaRobot:
             move = "straight"
         else:
             if sum(sensor_values[0:2]) > sum(sensor_values[3:]):  
-                move = "halfRight"
+                move = "fullRight"
             else:
-                move = "halfLeft"
+                move = "fullLeft"
         self.makeMove(move)
     
     def updateEvalStats(self):
