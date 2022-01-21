@@ -19,9 +19,16 @@ from betacode.HelperFunctions import random_point_in_circle
 
 
 class BetaRobot:
-    def __init__(self):
-        self.rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
-        self.robotID = self.getObjectHandle("Robobo")
+    def __init__(self, physical=False):
+        self.physical = physical
+        if not physical:
+            self.rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
+        else:
+            self.rob = robobo.HardwareRobobo().connect("10.15.3.235")
+        
+        if not physical:
+            self.robotID = self.getObjectHandle("Robobo")
+
         self.TotalIterations = 0
         
         # Parameters
@@ -57,7 +64,8 @@ class BetaRobot:
         self.int_to_moves = {0: "fullLeft", 1:"halfLeft", 2:"straight", 3:"halfRight", 4: "fullRight"}
     
         # Ids of objects to use with api
-        self.objectHandles, self.distanceHandles = self.getAllHandles()
+        if not physical:
+            self.objectHandles, self.distanceHandles = self.getAllHandles()
 
         # Data that is updated each "iteration"
         self.lastSpeed = (0, 0)
@@ -68,7 +76,7 @@ class BetaRobot:
 
         
         self.EvalUpdateRate = 1000
-        self.EvalStartTime = self.rob.get_sim_time()
+        self.EvalStartTime = time.time()
         self.evalTimes = []
 
         # Evaluation stats
@@ -114,7 +122,7 @@ class BetaRobot:
         # Calculate speed of left and right tire and execute move
         move_speed_multiplier = self.moves[move]
         speed_left, speed_right = base_speed[0] * move_speed_multiplier[0], base_speed[1] * move_speed_multiplier[1]
-        self.rob.move(speed_left, speed_right, self.moves_length[move])
+        self.rob.move(int(speed_left), int(speed_right), self.moves_length[move])
         
         self.lastSpeed = (speed_left, speed_right)
         self.lastMove = move
@@ -122,6 +130,15 @@ class BetaRobot:
 
     def readIR(self):
         """Function used to read and transform the IR"""
+        if self.physical:
+            values = np.array(self.rob.read_irs()[3:])
+            values = values - np.array([0,35,0,25,0])
+            print(values)
+            self.min_value = 20
+            values[values < self.min_value] = 0
+            values = np.flipud(values)
+            return values
+
         values = np.log(np.array(self.rob.read_irs()[3:]))/10 * -1
         values[values == np.inf] = 0
         values = np.flipud(values)
@@ -294,10 +311,11 @@ class BetaRobot:
             move = "straight"
         else:
             if sum(sensor_values[0:2]) > sum(sensor_values[3:]):  
-                move = "halfRight"
+                move = "fullRight"
             else:
-                move = "halfLeft"
+                move = "fullLeft"
         self.makeMove(move)
+
     
     def updateEvalStats(self):
         """ Function to update the evaluation stats"""

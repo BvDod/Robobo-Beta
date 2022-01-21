@@ -15,9 +15,6 @@ import prey
 import vrep
 
 from betacode.BetaRobot import BetaRobot
-from betacode.BetaRobotEnv import BetaRobotEnv
-
-from stable_baselines3 import DQN
 
 
 
@@ -50,13 +47,12 @@ def main():
     
     robot = BetaRobot(physical=True)
 
-    robot.resetRobot()
     robot.makeMove("stop")
     i = 0
     while True:
 
         i += 1
-        se
+        #nrobot.readIR()
         robot.executeBaseline()
         # robot.getFitness()
         # robot.checkIfStuck()
