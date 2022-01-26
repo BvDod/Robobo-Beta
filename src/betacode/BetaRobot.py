@@ -7,7 +7,7 @@ import math
 import time
 import random
 
-import robobo
+from robobo import SimulationRobobo
 import cv2
 import sys
 import signal
@@ -15,16 +15,18 @@ import prey
 import vrep
 
 from betacode.HelperFunctions import random_point_in_circle
+from betacode.Camera import Camera
 
 
 
 class BetaRobot:
-    def __init__(self, physical=False):
+    def __init__(self, physical=False, screen_segments=3):
         self.physical = physical
         if not physical:
-            self.rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
+            self.rob = SimulationRobobo().connect(address='127.0.0.1', port=19997)
         else:
-            self.rob = robobo.HardwareRobobo().connect("10.15.3.235")
+            from robobo import HardwareRobobo
+            self.rob = HardwareRobobo().connect("10.15.3.235")
         
         if not physical:
             self.robotID = self.getObjectHandle("Robobo")
@@ -32,10 +34,12 @@ class BetaRobot:
         self.TotalIterations = 0
         
         # Parameters
-        self.maxSpeed = 15         # Should be between 0 and 100, used to scale the "moves"
+        if self.physical:
+            self.maxSpeed = 15         # Should be between 0 and 100, used to scale the "moves"
+        else:
+            self.maxSpeed = 30
         self.collidingDistance = 0.035       # Distance from which we count something as a collision
         self.maxDetectableDistance = 0.20   # Dont measure distance to obstacle above this, defined in vrep also!
-        self.update_interval = 1000/8     # ms the robot should read sensors and move (1000/30 = 30hz for example)
 
         # Paramters for reseting env if robot stuck
         self.terminateDuration = 150       # Amount of iterations after which we reset environment if no movement seen
@@ -54,14 +58,14 @@ class BetaRobot:
 
         self.moves_length = {
             "fullLeft" : 2000,
-            "halfLeft" : 1000,
+            "halfLeft" : 500,
             "straight" : 1000,
-            "halfRight" : 1000,
+            "halfRight" : 500,
             "fullRight" : 2000,
             "stop" : 500,
         }
 
-        self.int_to_moves = {0: "fullLeft", 1:"straight", 2: "fullRight"}
+        self.int_to_moves = {0: "halfLeft", 1:"straight", 2: "halfRight"}
     
         # Ids of objects to use with api
         if not physical:
@@ -74,6 +78,7 @@ class BetaRobot:
         self.positionIterations = 0
         self.lastMove = None
 
+        self.foodCollected = 0
         
         self.EvalUpdateRate = 1000
         self.EvalStartTime = time.time()
@@ -89,20 +94,33 @@ class BetaRobot:
 
         # Location and angles of starting positions that work
         self.starting_locations = [
-        [[1.5906763022571035, -0.0556484690257477, 0.25], [2.1975553278341806, 0, 0]],
-        [[0.5016798490535783, -0.15607350686774132, 0.25], [0.7817498281686088, 0, 0]],
-        [[-0.9720390282859366, 0.06129349846488446, 0.25], [-0.6767864147074749, 0, 0]],
-        [[-1.0003626201620628, 0.7837414851760482, 0.25], [-0.31387512686168506, 0, 0]],
-        [[-0.5660457988203468, -1.3148253477324483, 0.25], [-0.16884032293871787, 0, 0]],
-        [[0.5617552702981955, -0.017153199243642312, 0.25], [0.36331885824583976, 0, 0]],
-        [[0.7876358767404442, -0.5243433050741434, 0.25], [-0.030591235493026225, 0, 0]],
-        [[-0.8498098565039783, 1.4949962169182174, 0.25], [-0.4626504830438387, 0, 0]],
-        [[-1.6839245043784712, -0.30083414218809573, 0.25], [1.455193192961179, 0, 0]],
-        [[-0.5318329738725882, -0.5227905118361207, 0.25], [1.5674624045287064, 0, 0]],
-        [[-0.10064955234833874, -0.6907052118532505, 0.25], [0.9667288710305453, 0, 0]],
-        [[1.2802100353798298, 0.28901793185901054, 0.25], [1.5960659102294805, 0, 0]],
-        [[-1.2114305718894163, 0.4153677616138217, 0.25], [-1.752219097786276, 0, 0]],
-        [[0.2560259236324979, -0.2617935404828697, 0.25], [-0.0029854381520393325, 0, 0]],]
+        [[-0.9625365505220963, 0.9145846955018123, 0.037], (0.9683011484330963, 0, 0)],
+        [[0.8811394082957866, -0.1663538154947279, 0.037], (-3.1338616741234095, 0, 0)],
+        [[-1.4982160128197202, -0.4909876080887573, 0.037], (-1.30136156052843, 0, 0)],
+        [[0.8923584864328123, 1.1564104185450546, 0.037], (2.58360082364361, 0, 0)],
+        [[-0.3976044010339124, 1.0893594478041397, 0.037], (-2.754958729796479, 0, 0)],
+        [[-0.1321745391351034, -0.9770563466538994, 0.037], (0.023420247684303064, 0, 0)],
+        [[1.189608329611025, -1.2149901031978512, 0.037], (-1.4326636437711433, 0, 0)],
+        [[1.1843340590839624, 0.6489511780891453, 0.037], (-2.7217380449807287, 0, 0)],
+        [[-0.9809657999484062, -1.1083365505927707, 0.037], (-2.3345794598554583, 0, 0)],
+        [[-1.2784507744439655, 1.1563774529015864, 0.037], (-2.8678152000933483, 0, 0)],
+        [[0.3901496399704625, -1.1792528983328467, 0.037], (-2.8105401591253365, 0, 0)],
+        [[0.5295369882192718, -0.048522756432280524, 0.037], (-1.9326942828271183, 0, 0)],
+        [[-0.8163314357118288, 0.5397625262462665, 0.037], (-2.3632722586621946, 0, 0)],
+        [[-1.4440228275011915, 0.5950118407108472, 0.037], (2.844069225037062, 0, 0)],
+        [[-0.9717158259496884, -0.17725332468788485, 0.037], (2.6805053622515524, 0, 0)],
+        [[1.3746156462656327, 0.3243695319666146, 0.037], (2.9971230213214586, 0, 0)],
+        [[0.7166395097945886, -0.5432170821274869, 0.037], (2.8906049897710853, 0, 0)],
+        [[0.9799829389026341, -1.1038280412639894, 0.037], (0.5392770690598683, 0, 0)],
+        [[1.447334112732503, -0.054869621891055646, 0.037], (2.840217621548317, 0, 0)],
+        [[0.3969496803873026, 0.6705457436227908, 0.037], (-1.6546259538828734, 0, 0)],
+        [[-1.577377266536482, -0.010517420061427961, 0.037], (0.08687158123064265, 0, 0)],
+        [[0.39517946402002524, 0.9582565724942487, 0.037], (0.48617744867462065, 0, 0)],
+        [[1.4615278206951483, 0.37838995693288574, 0.037], (-0.016440360512703478, 0, 0)],
+        [[-1.5560066353466409, 0.7129815818688116, 0.037], (1.9695152074870137, 0, 0)],]
+
+        self.screen_segments = screen_segments
+        self.camera = Camera(screen_segments=self.screen_segments)
 
         
 
@@ -145,6 +163,15 @@ class BetaRobot:
         if not np.all(values == 0):
             values = self.normalizeIRVector(values)
         return values
+    
+    def readCamera(self, debug=True):
+        """Function used to read and transform the IR"""
+        image = self.rob.get_image_front()
+        mask_ratio, blobs = self.camera.getBlobs(image)
+        self.mask_ratio = mask_ratio
+        camera_area = self.camera.getCameraArea(blobs)
+        return camera_area
+
 
     def normalizeIRVector(self, vector):
         """ Applies vector normalization """
@@ -154,16 +181,16 @@ class BetaRobot:
     
     def getFitness(self):
         """ Get current fitness of the robot """
-        distanceToClosest, isColliding = self.getDistance()
-        totalSpeed = self.lastSpeed[0] + self.lastSpeed[1]
-
-        # Fitness has 3 different components
-        speedFitness = int(self.lastMove == "straight")*4 + -2   # range is -2 to 2
-        distanceFitness = (distanceToClosest / self.maxDetectableDistance) * 2    # range is 0 to 1
-        # collisionFitness = (isColliding) * -20
-
-        fitness = speedFitness + distanceFitness
+        fitness = self.mask_ratio * 8 + self.isNewFoodCollected() * 100
         return fitness
+    
+    def isNewFoodCollected(self):
+        amount = self.rob.collected_food()
+        if not amount == self.foodCollected:
+            self.foodCollected = amount
+            return True
+        return False
+
 
     def updateAvgDisplacement(self):
         """ Update the moving average of the displacement of the robot """
@@ -189,23 +216,10 @@ class BetaRobot:
         self.rob.wait_for_stop()
 
         # Randomize location and angle of robot by randomzing location and angle of the environment
-        self.setStartLocation([0, 0, 0.25])
-        self.setStartAngle([0,0.5*math.pi,0], mode="world")
-
         location, angle = random.choice(self.starting_locations)
-
-        print("Randomzing starting location, starting location and angle: ")
-        print(location, angle)
-        print()
-
         self.setStartLocation(location)
-        angle[1] += 0.5*math.pi
         self.setStartAngle(angle)
-
-        # angle = self.randomizeStartAngle()
-        # location = self.randomizeStartLocation()
-
-        # print(f"Random angle: {angle}, Random location: {location}")
+        print(f"[{location}, {angle}],")
         self.startSimulation()
         
         # Reset variables
@@ -214,24 +228,19 @@ class BetaRobot:
         self.averageDisplacement = 0
         self.positionIterations = 0
         self.consecutiveCollision = 0
+        self.foodCollected = 0
 
-        
-        for i in range(5):
+        self.rob.set_phone_tilt(1/5*math.pi, 100)
+        for i in range(2):
             self.makeMove("stop", dontIterate=True)
         
         self.rob.wait_for_ping()
     
 
-    def randomizeStartAngle(self):
-        """ Function used to randomize the angle of the environment """
-        random_euler_angles = (random.uniform(-math.pi, math.pi), 0, 0)
-        vrep.unwrap_vrep(vrep.simxSetObjectOrientation(self.rob._clientID, self.objectHandles[0], self.objectHandles[0], random_euler_angles, vrep.simx_opmode_blocking))
-        return random_euler_angles
     
-
     def randomizeStartLocation(self):
         """ Function used to randomize the location of the environment """
-        center = [0, 0, 0.25]
+        center = [0, 0, 0.037]
         offset = random_point_in_circle(1.8)
         new_location = [center[0] + offset[0], center[1] + offset[1], center[2]]
         self.setStartLocation(new_location)
@@ -239,23 +248,18 @@ class BetaRobot:
     
     def randomizeStartAngle(self):
         """ Function used to randomize the angle of the environment """
-        random_euler_angles = (random.uniform(-math.pi, math.pi), 0, 0)
+        random_euler_angles = (random.uniform(-math.pi, math.pi) , 0, 0)
         self.setStartAngle(random_euler_angles)
         return random_euler_angles
     
 
     def setStartLocation(self, location):
         """ Function used to randomize the location of the environment """
-        vrep.unwrap_vrep(vrep.simxSetObjectPosition(self.rob._clientID, self.objectHandles[0], -1, location, vrep.simx_opmode_blocking))
+        vrep.unwrap_vrep(vrep.simxSetObjectPosition(self.rob._clientID, self.robotID, -1, location, vrep.simx_opmode_blocking))
     
-    def setStartAngle(self, angles, mode="self"):
+    def setStartAngle(self, angles, mode="world"):
         """ Function used to randomize the location of the environment """
-        if mode == "self":
-            handle = self.objectHandles[0]
-            angles[1] += 0.5*math.pi
-        if mode == "world":
-            handle = -1
-        vrep.unwrap_vrep(vrep.simxSetObjectOrientation(self.rob._clientID, self.objectHandles[0], handle, angles, vrep.simx_opmode_blocking))
+        vrep.unwrap_vrep(vrep.simxSetObjectOrientation(self.rob._clientID, self.robotID, self.objectHandles[0], angles, vrep.simx_opmode_blocking))
         
 
     def getDisplacement(self):
@@ -299,8 +303,8 @@ class BetaRobot:
         objectHandles = []
         distanceHandles = []
 
-        objectHandles.append(self.getObjectHandle("Cuboid2"))
-        distanceHandles.append(self.getDistanceHandle("Distance"))
+        objectHandles.append(self.getObjectHandle("Cuboid"))
+        # distanceHandles.append(self.getDistanceHandle("Distance"))
         
         return objectHandles, distanceHandles
     
@@ -319,6 +323,7 @@ class BetaRobot:
     
     def updateEvalStats(self):
         """ Function to update the evaluation stats"""
+        '''
         self.CollisionCount += int(self.isColliding)
         self.WheelSpeedSum += (self.moves[self.lastMove][0] + self.moves[self.lastMove][1])
         if self.TotalIterations % self.EvalUpdateRate == 0:
@@ -330,8 +335,7 @@ class BetaRobot:
             self.evalTimes.append((currentTime - self.EvalStartTime)/1000)
             self.EvalStartTime = currentTime
             print(f"Eval stats last {self.EvalUpdateRate} it: {self.CollisionRate[-1]} collisions, avg wheel speed: {self.AvgWheelSpeed[-1]}, took {self.evalTimes[-1]}s")
-        
-        
+        '''
 
     def getObjectHandle(self, name):
         """ Get handle (ID) of an object"""
@@ -349,3 +353,4 @@ class BetaRobot:
     
     def stopWorld(self):
         self.rob.stop_world()
+    

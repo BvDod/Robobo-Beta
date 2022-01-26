@@ -16,10 +16,13 @@ def terminate_program(signal_number, frame):
 
 
 class BetaRobotEnv(gym.Env):
-    def __init__(self, physical=False):
+    def __init__(self, physical=False, max_iterations=500, screen_segments=3):
         self.physical = physical
-        self.robot = BetaRobot(physical=physical)
-        
+        self.robot = BetaRobot(physical=physical, screen_segments=screen_segments)
+        self.iteration = 0
+        self.max_iterations = 500
+        self.screen_segments = screen_segments
+
         if not physical:
             self.robot.resetRobot()
     
@@ -29,38 +32,24 @@ class BetaRobotEnv(gym.Env):
     def reset(self):
         if not self.physical:
             self.robot.resetRobot()
-        observation =  self.robot.readIR()
+        observation =  self.robot.readCamera()
+        self.iteration = 0
 
-        if np.all(observation == 0):
-            observation = 5
-        else:
-            observation = np.argmax(observation)
+        
 
         return observation
     
     def step(self, action):
+        self.iteration += 1
         self.robot.makeMove(action)
+        observation =  self.robot.readCamera()
+        
         if not self.physical:
             reward = self.robot.getFitness()
-            isStuck = self.robot.checkIfStuck()
-        else:
-            reward = 0
-            isStuck = False
-        observation =  self.robot.readIR()
-
-        # Disctresize observation
-        if np.all(observation == 0):
-            observation = 5
-        else:
-            observation = np.argmax(observation)
         
         if not self.physical:
             self.robot.updateEvalStats()
 
-        if isStuck:
-            reward -= 100
 
-        return observation, reward, isStuck, {}
+        return observation, reward, self.iteration == self.max_iterations or self.robot.foodCollected == 11, {}
     
-    def check_env(self):
-        check_env(self, warn=True)
