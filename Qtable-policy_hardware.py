@@ -29,17 +29,14 @@ def main():
 
 
     # Use this code instead of above code to test the robot
-    q_table = np.loadtxt("q_table_17000.txt")
-    env = BetaRobotEnv(physical=True)
+    q_table = np.loadtxt("q_table_70000.txt")
+    env = BetaRobotEnv(physical=True, screen_segments=5)
     i = 0
     state = env.reset()
     while True:
         action = np.argmax(q_table[state,:]) # Exploit learned values
-        if action == 1:
-            i += 1
         next_state, reward, done, info = env.step(action) 
         state = next_state
-        print(i)
 
 
         #nrobot.readIR()

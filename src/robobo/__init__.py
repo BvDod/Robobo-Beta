@@ -5,4 +5,4 @@ from .simulation_prey import SimulationRoboboPrey
 
 import sys
 
-# from .hardware import HardwareRobobo
+from .hardware import HardwareRobobo

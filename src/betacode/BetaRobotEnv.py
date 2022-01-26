@@ -5,8 +5,6 @@ import sys
 import signal
 
 import numpy as np
-import gym
-from gym import spaces
 
 
 
@@ -15,7 +13,7 @@ def terminate_program(signal_number, frame):
     sys.exit(1)
 
 
-class BetaRobotEnv(gym.Env):
+class BetaRobotEnv():
     def __init__(self, physical=False, max_iterations=500, screen_segments=3):
         self.physical = physical
         self.robot = BetaRobot(physical=physical, screen_segments=screen_segments)
@@ -25,9 +23,6 @@ class BetaRobotEnv(gym.Env):
 
         if not physical:
             self.robot.resetRobot()
-    
-        self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Discrete(6)
     
     def reset(self):
         if not self.physical:
@@ -50,6 +45,7 @@ class BetaRobotEnv(gym.Env):
         if not self.physical:
             self.robot.updateEvalStats()
 
-
+        if self.physical:
+            return observation, 0, False, {}
         return observation, reward, self.iteration == self.max_iterations or self.robot.foodCollected == 11, {}
     

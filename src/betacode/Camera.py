@@ -3,11 +3,10 @@ import cv2
 import imutils
 import numpy as np
 
-from PIL import Image as im
 
 
 class Camera():
-    def __init__(self, image_size=(128,128), debug=False, screen_segments=3):
+    def __init__(self, image_size=(128,128), debug=True, screen_segments=3):
         self.greenLower = (29, 86, 6)
         self.greenUpper = (64, 255, 255)
         self.debug = debug
@@ -83,11 +82,20 @@ class Camera():
 
 
     def showImage(self, image):
-        cv2.imshow('image',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
+        import os
+        i = 1
+        """
+        while True:
+            if os.path.isfile(f"images/image{i}.jpg"):
+                i += 1
+            else:
+                break
+        cv2.imwrite(f'images/image{i}.jpg',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
         if self.debug == True:
-            cv2.waitKey(0)
+            import time
         else:
             cv2.waitKey(1)
+        """
     
     def resizeImage(self, image):
         """ Resizes images to proper size """
