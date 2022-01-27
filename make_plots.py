@@ -59,16 +59,26 @@ def main():
 
 
     ####### Evaluation Boxplots
-    dqn1 = [39, 11, 41, 36, 75, 23, 119, 5, 33, 19]
-    dqn2 = [172, 9, 15, 15, 48, 70, 30, 64, 31, 53]
-    qtable = [552, 587, 1128, 380, 1830, 843, 389, 379, 376, 216]
-    random = [[10, 4, 31, 0.0, 8, 35, 8, 16, 4, 32]]
+    qtable3 = [208, 220, 261, 221, 241, 236, 233, 208, 242, 234]
+    qtable3_food = [11, 11, 11, 11, 11, 11, 11, 11, 11, 11]
 
-    print(np.mean(dqn1),np.mean(dqn2),np.mean(qtable),np.mean(random))
-    ax = sns.boxplot(data=[dqn1, dqn2, qtable, random])
-    ax.set_xticklabels(["DQN", "DQN-simple", "Q-table", "Random Baseline"])
-    ax.set_ylabel("Foward moves untill Collision")
-    ax.set_title("Evaluation of final models")
+    qtable5 = [261, 228, 215, 189, 193, 202, 183, 215, 209, 182]
+    qtable5_food = [11, 11, 11, 11, 11, 11, 11, 11, 11, 11]
+
+    qtable51 = [233, 247, 239, 183, 235, 234, 243, 210, 214, 244]
+    qtable51_food =[11, 11, 11, 11, 11, 11, 11, 11, 11, 11]
+
+    qtableRand = [500, 500, 500, 500, 500, 500, 500, 500, 500, 500]
+    qtableRand_food = [3, 3, 2, 3, 3, 3, 1, 4, 2, 3]
+
+
+    print(np.mean(qtable3),np.mean(qtable5),np.mean(qtable51),np.mean(qtableRand))
+    print(np.mean(np.array(qtable3)/np.array(qtable3_food)),np.mean(np.array(qtable5)/np.array(qtable5_food)),np.mean(np.array(qtable51)/np.array(qtable51_food)),np.mean(np.array(qtableRand)/np.array(qtableRand_food)))
+
+    ax = sns.boxplot(data=[np.array(qtable3)/np.array(qtable3_food), np.array(qtable5)/np.array(qtable5_food), np.array(qtable51)/np.array(qtable51_food)])
+    ax.set_xticklabels(["Q-table-3", "Q-table-5", "Q-table-5+1"])
+    ax.set_ylabel("Moves")
+    ax.set_title("Evaluation: avg. moves untill food gathered")
     plt.show()
 
     ax = sns.boxplot(data=[qtable])

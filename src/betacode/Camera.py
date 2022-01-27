@@ -15,7 +15,7 @@ class Camera():
             self.greenLower = (35, 86, 20)
             self.greenUpper = (88, 255, 255)
 
-        self.debug = debug
+        self.debug = True
         self.image_size = image_size
         self.screen_segments = screen_segments
         self.add_bottom_segment = add_bottom_segment
@@ -31,8 +31,11 @@ class Camera():
 
         # Detect green blobs
         mask = cv2.inRange(hsv, self.greenLower, self.greenUpper)
+        self.showImage(mask)
         mask = cv2.erode(mask, None, iterations=1)
+        self.showImage(mask)
         mask = cv2.dilate(mask, None, iterations=1)
+        self.showImage(mask)
 
         mask_ratio = np.mean(mask)/255
         
@@ -59,7 +62,6 @@ class Camera():
                 if w > 5:
                     cv2.rectangle(image, (x,y), (x+w,y+h), (0, 255, 0), 1)
             self.showImage(blurred)
-            self.showImage(mask)
             self.showImage(image)
         else:
             self.showImage(image)
@@ -89,18 +91,18 @@ class Camera():
     def showImage(self, image):
         import os
         i = 1
-        if self.physical:
-            while True:
-                if os.path.isfile(f"images/image{i}.jpg"):
-                    i += 1
-                else:
-                    break
-            cv2.imwrite(f'images/image{i}.jpg',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
-        
+        while True:
+            if os.path.isfile(f"images/image{i}.jpg"):
+                i += 1
+            else:
+                break
+        cv2.imwrite(f'images/image{i}.jpg',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
+        """
         else:
             cv2.imshow("image", cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
             cv2.waitKey(1)
-    
+        """
+
     def resizeImage(self, image):
         """ Resizes images to proper size """
         return cv2.resize(image, self.image_size, interpolation= cv2.INTER_LINEAR)

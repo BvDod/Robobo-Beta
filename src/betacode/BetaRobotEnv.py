@@ -13,7 +13,7 @@ def terminate_program(signal_number, frame):
     sys.exit(1)
 
 
-class BetaRobotEnv(gym.Env):
+class BetaRobotEnv():
     def __init__(self, physical=False, max_iterations=500, screen_segments=3, add_bottom_segment=False):
         self.physical = physical
         self.robot = BetaRobot(physical=physical, screen_segments=screen_segments, add_bottom_segment=add_bottom_segment)
