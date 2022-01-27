@@ -27,9 +27,8 @@ def main():
     signal.signal(signal.SIGINT, terminate_program)
 
 
-    robot = BetaRobot()
+    env =
     
-    done = False
     for i in range(10):
         robot.
 

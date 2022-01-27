@@ -3,7 +3,6 @@ import cv2
 import imutils
 import numpy as np
 
-from PIL import Image as im
 
 
 class Camera():
@@ -73,7 +72,6 @@ class Camera():
             return 0
         area_size = 128/self.screen_segments
         camera_areas = [[i*area_size,(i+1)*area_size] for i in range(self.screen_segments)]
-        print(camera_areas)
         x, y, _ = max(blobs, key=lambda blob: blob[2])
 
         if self.add_bottom_segment:
@@ -89,10 +87,18 @@ class Camera():
 
 
     def showImage(self, image):
-        cv2.imshow('image',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
-        if self.debug == True:
-            cv2.waitKey(0)
+        import os
+        i = 1
+        if self.physical:
+            while True:
+                if os.path.isfile(f"images/image{i}.jpg"):
+                    i += 1
+                else:
+                    break
+            cv2.imwrite(f'images/image{i}.jpg',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
+        
         else:
+            cv2.imshow("image", cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
             cv2.waitKey(1)
     
     def resizeImage(self, image):

@@ -26,7 +26,7 @@ class BetaRobot:
             self.rob = SimulationRobobo().connect(address='127.0.0.1', port=19997)
         else:
             from robobo import HardwareRobobo
-            self.rob = HardwareRobobo().connect("10.15.3.235")
+            self.rob = HardwareRobobo(camera=True).connect("10.15.3.235")
         
         if not physical:
             self.robotID = self.getObjectHandle("Robobo")
@@ -35,7 +35,7 @@ class BetaRobot:
         
         # Parameters
         if self.physical:
-            self.maxSpeed = 15         # Should be between 0 and 100, used to scale the "moves"
+            self.maxSpeed = 20         # Should be between 0 and 100, used to scale the "moves"
         else:
             self.maxSpeed = 30
         self.collidingDistance = 0.035       # Distance from which we count something as a collision
@@ -121,6 +121,11 @@ class BetaRobot:
 
         self.screen_segments = screen_segments
         self.camera = Camera(screen_segments=self.screen_segments, add_bottom_segment=add_bottom_segment, physical=physical)
+        if self.physical:
+            self.rob.set_phone_tilt(110, 100)
+        else:
+            self.rob.set_phone_tilt(1/5*math.pi, 100)
+
 
         
 
@@ -230,7 +235,11 @@ class BetaRobot:
         self.consecutiveCollision = 0
         self.foodCollected = 0
 
-        self.rob.set_phone_tilt(1/5*math.pi, 100)
+        if self.physical:
+            self.rob.set_phone_tilt(110, 100)
+        else:
+            self.rob.set_phone_tilt(1/5*math.pi, 100)
+            
         for i in range(2):
             self.makeMove("stop", dontIterate=True)
         
