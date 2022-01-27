@@ -121,7 +121,11 @@ class BetaRobot:
 
         self.screen_segments = screen_segments
         self.camera = Camera(screen_segments=self.screen_segments)
-        self.rob.set_phone_tilt(110, 100)
+        if self.physical:
+            self.rob.set_phone_tilt(110, 100)
+        else:
+            self.rob.set_phone_tilt(1/5*math.pi, 100)
+
 
         
 
@@ -231,7 +235,11 @@ class BetaRobot:
         self.consecutiveCollision = 0
         self.foodCollected = 0
 
-        self.rob.set_phone_tilt(1/5*math.pi, 100)
+        if self.physical:
+            self.rob.set_phone_tilt(110, 100)
+        else:
+            self.rob.set_phone_tilt(1/5*math.pi, 100)
+            
         for i in range(2):
             self.makeMove("stop", dontIterate=True)
         

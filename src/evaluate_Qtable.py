@@ -26,27 +26,35 @@ def terminate_program(signal_number, frame):
 def main():
     signal.signal(signal.SIGINT, terminate_program)
 
+    q_table = np.loadtxt("q_table_70000.txt")
+    bottom_segment = False
+    env = BetaRobotEnv(screen_segments=q_table.shape[0] - 1 + int(bottom_segment))
+    
 
-    env = BetaRobotEnv()
-    q_table = np.loadtxt("q_table_17000.txt")
 
-
-    total_rewards = []
     rewards = 0
-
+    total_rewards = []
+    total_moves = []
     done = False
     for i in range(10):
+        rewards = 0
+        moves = 0
         while True:
-            action = np.argmax(q_table[state,:]) # Exploit learned values
-            if action == 1:
-                rewards += 1
+            moves += 1
+            # action = np.argmax(q_table[state,:]) # Exploit learned values
+            action =  random.randint(0,q_table.shape[1]-1)
             next_state, reward, done, info = env.step(action) 
+            if reward > 100:
+                rewards += 1
             state = next_state
 
             if done:
-                total_rewards.append(np.sum(rewards))
-                rewards = []
+                total_rewards.append(rewards)
+                total_moves.append(moves)
+                env.reset()
                 break
+        print(total_rewards)
+        print(total_moves)
     print(total_rewards)
   
 

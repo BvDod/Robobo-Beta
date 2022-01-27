@@ -6,14 +6,14 @@ import numpy as np
 
 
 class Camera():
-    def __init__(self, image_size=(128,128), debug=True, screen_segments=3):
+    def __init__(self, image_size=(128,128), debug=True, screen_segments=3, physical=False):
         self.greenLower = (29, 86, 6)
         self.greenUpper = (64, 255, 255)
         self.debug = debug
         self.image_size = image_size
         self.screen_segments = screen_segments
         self.add_bottom_segment = False
-        
+        self.physical = physical
 
     def getBlobs(self, image):
         """ Gets the ratio of blob to no blob and also a list which contains all blobs (location and size)"""
@@ -66,7 +66,6 @@ class Camera():
             return 0
         area_size = 128/self.screen_segments
         camera_areas = [[i*area_size,(i+1)*area_size] for i in range(self.screen_segments)]
-        print(camera_areas)
         x, y, _ = max(blobs, key=lambda blob: blob[2])
 
         if self.add_bottom_segment:
@@ -84,18 +83,17 @@ class Camera():
     def showImage(self, image):
         import os
         i = 1
-        """
-        while True:
-            if os.path.isfile(f"images/image{i}.jpg"):
-                i += 1
-            else:
-                break
-        cv2.imwrite(f'images/image{i}.jpg',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
-        if self.debug == True:
-            import time
+        if self.physical:
+            while True:
+                if os.path.isfile(f"images/image{i}.jpg"):
+                    i += 1
+                else:
+                    break
+            cv2.imwrite(f'images/image{i}.jpg',cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
+        
         else:
+            cv2.imshow("image", cv2.resize(image,None,fx=4, fy=4, interpolation = cv2.INTER_NEAREST))
             cv2.waitKey(1)
-        """
     
     def resizeImage(self, image):
         """ Resizes images to proper size """
