@@ -28,11 +28,12 @@ def main():
 
     screen_segments = 5
     epsiode_length = 500
-    env = BetaRobotEnv(max_iterations=epsiode_length, screen_segments=5)
-    moves = screen_segments + 1
+    add_bottom_segment = True
+    env = BetaRobotEnv(max_iterations=epsiode_length, screen_segments=5, add_bottom_segment=add_bottom_segment)
+    moves = screen_segments + 1 + int(add_bottom_segment)
 
     # (states, actions)
-    q_table = np.full((moves,3), 1.0)
+    q_table = np.loadtxt("q_table_59000.txt")
     
     # Hyperparameters
     alpha = 0.02
@@ -52,15 +53,16 @@ def main():
 
     done = False
     state = env.reset()
-    for i in range(1, 100001):
+    epsilon = 0.05
+    for i in range(59000, 100001):
         print(i)
         print(q_table)
         print(q_table[state,:])
         if i % 1000 == 0:
             np.savetxt(f"q_table_{i}.txt", q_table)
-            np.savetxt(f"total_rewards.txt", total_rewards)
-            np.savetxt(f"total_rewards_steps.txt", reward_steps)
-            np.savetxt(f"steps_per_iteration.txt", steps_per_iteration)
+            np.savetxt(f"total_rewards2.txt", total_rewards)
+            np.savetxt(f"total_rewards_steps2.txt", reward_steps)
+            np.savetxt(f"steps_per_iteration2.txt", steps_per_iteration)
             print(q_table)
             print(total_rewards)
 
@@ -74,6 +76,7 @@ def main():
             action = np.argmax(q_table[state,:]) # Exploit learned values
 
         next_state, reward, done, info = env.step(action) 
+        print(next_state)
         if reward >= 100:
             rewards.append(1)
         

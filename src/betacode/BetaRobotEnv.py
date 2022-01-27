@@ -16,9 +16,9 @@ def terminate_program(signal_number, frame):
 
 
 class BetaRobotEnv(gym.Env):
-    def __init__(self, physical=False, max_iterations=500, screen_segments=3):
+    def __init__(self, physical=False, max_iterations=500, screen_segments=3, add_bottom_segment=False):
         self.physical = physical
-        self.robot = BetaRobot(physical=physical, screen_segments=screen_segments)
+        self.robot = BetaRobot(physical=physical, screen_segments=screen_segments, add_bottom_segment=add_bottom_segment)
         self.iteration = 0
         self.max_iterations = 500
         self.screen_segments = screen_segments

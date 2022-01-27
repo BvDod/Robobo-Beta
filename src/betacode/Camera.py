@@ -7,13 +7,19 @@ from PIL import Image as im
 
 
 class Camera():
-    def __init__(self, image_size=(128,128), debug=False, screen_segments=3):
-        self.greenLower = (29, 86, 6)
-        self.greenUpper = (64, 255, 255)
+    def __init__(self, image_size=(128,128), debug=False, screen_segments=3, add_bottom_segment=False, physical=False):
+        self.physical = physical
+        if not physical:
+            self.greenLower = (29, 86, 6)
+            self.greenUpper = (64, 255, 255)
+        if physical:
+            self.greenLower = (35, 86, 20)
+            self.greenUpper = (88, 255, 255)
+
         self.debug = debug
         self.image_size = image_size
         self.screen_segments = screen_segments
-        self.add_bottom_segment = False
+        self.add_bottom_segment = add_bottom_segment
         
 
     def getBlobs(self, image):
@@ -71,7 +77,7 @@ class Camera():
         x, y, _ = max(blobs, key=lambda blob: blob[2])
 
         if self.add_bottom_segment:
-            if y < 128/3:
+            if y > (128/3) * 2:
                 return self.screen_segments + 1
 
         for i, (lower, upper) in enumerate(camera_areas):

@@ -5,7 +5,7 @@ import numpy as np
 
 def main():
 
-    sns.set()
+    sns.set(font_scale=1.3)
     
     def moving_average(X, n=100):
         new_list = []
@@ -17,68 +17,44 @@ def main():
         return new_list
     
     ######## plot Q-table TRAINING
+    dir = "training_results/Task2/5+1"
+    rewards = np.loadtxt(f"{dir}/total_rewards.txt")
+    steps =  np.loadtxt(f"{dir}/total_rewards_steps.txt")
+    steps_per =  np.loadtxt(f"{dir}/steps_per_iteration.txt")
 
-    rewards = np.loadtxt("total_rewards.txt")
-    steps =  np.loadtxt("total_rewards_steps.txt")
-    steps_per =  np.loadtxt("steps_per_iteration.txt")
-
-    plt.plot(steps, moving_average(rewards, n=20))
+    plt.plot(steps, moving_average(rewards, n=1))
     plt.xlabel("Step")
-    plt.ylabel("Reward")
-    plt.title("Q-table Training Reward Curve (smoothed)")
+    plt.ylabel("Food Gathered per Episode")
+    plt.title("Food Gathered per Episode (Qtable-5+1)")
+    plt.subplots_adjust(bottom=0.15)
     plt.show()
 
     plt.plot(steps, moving_average(steps_per, n=10))
     plt.xlabel("Step")
-    plt.ylabel("Steps per episode")
-    plt.title("Q-table Training Reward Curve (smoothed)")
+    plt.ylabel("Epsiode Length (steps)")
+    plt.title("Time to gather all Food (Qtable-5+1)")
+    plt.subplots_adjust(bottom=0.15)
     plt.show()
 
+    ######## plot Epsilon TRAINING
+    start_epsilon = 0.5
+    end_epsilon = 0.05
+    end_epsilon_iteration = 20000
+    epsilons = []
+    for i in range(100000):
+        if i < end_epsilon_iteration:
+            epsilon = start_epsilon - ((start_epsilon - end_epsilon) * (i/end_epsilon_iteration))
+        else:
+            epsilon = end_epsilon
 
-    ######## plot DQN TRAINING
-    steps = []
-    rewards = []
-    with open('5,5.csv') as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        line_count = 0
-        for row in csv_reader:
-            if row[1] == "Step":
-                continue
-            steps.append(int(row[1]))
-            rewards.append(float(row[2]))
-    steps= np.array(steps[1:20000])
-    rewards = np.array(rewards[1:20000])
-    rewards = rewards[steps <= 20000]
-    steps = steps[steps <= 20000]
-    yhat = moving_average(rewards, n=30)
-
-    plt.plot(steps, yhat)
+        epsilons.append(epsilon)
+    plt.plot(range(100000), epsilons)
     plt.xlabel("Step")
-    plt.ylabel("Reward")
-    plt.title("DQN Training Reward Curve (smoothed)")
+    plt.ylabel("Epsilon")
+    plt.title("Epsilon decay")
+    plt.subplots_adjust(bottom=0.15)
     plt.show()
 
-    steps = []
-    rewards = []
-    with open('5.csv') as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        line_count = 0
-        for row in csv_reader:
-            if row[1] == "Step":
-                continue
-            steps.append(int(row[1]))
-            rewards.append(float(row[2]))
-    steps= np.array(steps[1:20000])
-    rewards = np.array(rewards[1:20000])
-    rewards = rewards[steps <= 20000]
-    steps = steps[steps <= 20000]
-    yhat = moving_average(rewards, n=30)
-
-    plt.plot(steps, yhat)
-    plt.xlabel("Step")
-    plt.ylabel("Reward")
-    plt.title("DQN-simple Training Reward Curve (smoothed)")
-    plt.show()
 
 
 
@@ -101,27 +77,6 @@ def main():
     ax.set_title("Evaluation of final models")
     plt.show()
 
-
-
-def savitzky_golay(y, window_size, order, deriv=0, rate=1):
-    import numpy as np
-    from math import factorial
-    
-  
-    window_size = np.abs(np.int(window_size))
-    order = np.abs(np.int(order))
-    
-    order_range = range(order+1)
-    half_window = (window_size -1) // 2
-    # precompute coefficients
-    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
-    m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
-    # pad the signal at the extremes with
-    # values taken from the signal itself
-    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
-    y = np.concatenate((firstvals, y, lastvals))
-    return np.convolve( m[::-1], y, mode='valid')
 
 
 if __name__ == "__main__":

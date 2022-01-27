@@ -20,7 +20,7 @@ from betacode.Camera import Camera
 
 
 class BetaRobot:
-    def __init__(self, physical=False, screen_segments=3):
+    def __init__(self, physical=False, screen_segments=3, add_bottom_segment=False):
         self.physical = physical
         if not physical:
             self.rob = SimulationRobobo().connect(address='127.0.0.1', port=19997)
@@ -120,7 +120,7 @@ class BetaRobot:
         [[-1.5560066353466409, 0.7129815818688116, 0.037], (1.9695152074870137, 0, 0)],]
 
         self.screen_segments = screen_segments
-        self.camera = Camera(screen_segments=self.screen_segments)
+        self.camera = Camera(screen_segments=self.screen_segments, add_bottom_segment=add_bottom_segment, physical=physical)
 
         
 
