@@ -9,6 +9,8 @@ def getBlobs(image):
 
     greenLower = (35, 86, 20)
     greenUpper = (88, 255, 255)
+    redLower = (0, 86, 6) # TODO Tune
+    redUpper = (20, 255, 255) # TODO Tune
 
     image = resizeImage(image)
     # Pre-process image
@@ -16,7 +18,7 @@ def getBlobs(image):
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 
     # Detect green blobs
-    mask = cv2.inRange(hsv, greenLower, greenUpper)
+    mask = cv2.inRange(hsv, redLower, redUpper)
     mask = cv2.erode(mask, None, iterations=1)
     mask = cv2.dilate(mask, None, iterations=1)
 

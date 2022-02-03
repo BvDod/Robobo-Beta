@@ -26,10 +26,10 @@ def terminate_program(signal_number, frame):
 def main():
     signal.signal(signal.SIGINT, terminate_program)
 
-    "training_results/Task2/5+1"
-    q_table = np.loadtxt("training_results/Task2/5+1/q_table_87000.txt")
+    "training_results/Task3/"
+    q_table = np.loadtxt("training_results/Task3/Generalist/q_table_100000.txt")
     bottom_segment = False
-    env = BetaRobotEnv(screen_segments=q_table.shape[0] - 1 + int(bottom_segment))
+    env = BetaRobotEnv(screen_segments=5, generalist=True)
     
 
 
@@ -50,6 +50,7 @@ def main():
                 rewards += 1
             state = next_state
 
+            print(next_state)
             if done:
                 total_rewards.append(rewards)
                 total_moves.append(moves)

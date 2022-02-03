@@ -16,11 +16,11 @@ import vrep
 
 from betacode.HelperFunctions import random_point_in_circle
 from betacode.Camera import Camera
-
+import betacode.startLocations as startLocations
 
 
 class BetaRobot:
-    def __init__(self, physical=False, screen_segments=3, add_bottom_segment=False):
+    def __init__(self, physical=False, screen_segments=3, add_bottom_segment=False, generalist=False):
         self.physical = physical
         if not physical:
             self.rob = SimulationRobobo().connect(address='127.0.0.1', port=19997)
@@ -30,8 +30,11 @@ class BetaRobot:
         
         if not physical:
             self.robotID = self.getObjectHandle("Robobo")
+            self.foodHandle = self.getObjectHandle("Food")
+            self.baseHandle = self.getObjectHandle("Base")
 
         self.TotalIterations = 0
+        self.generalist = generalist
         
         # Parameters
         if self.physical:
@@ -93,38 +96,15 @@ class BetaRobot:
 
 
         # Location and angles of starting positions that work
-        self.starting_locations = [
-        [[-0.9625365505220963, 0.9145846955018123, 0.037], (0.9683011484330963, 0, 0)],
-        [[0.8811394082957866, -0.1663538154947279, 0.037], (-3.1338616741234095, 0, 0)],
-        [[-1.4982160128197202, -0.4909876080887573, 0.037], (-1.30136156052843, 0, 0)],
-        [[0.8923584864328123, 1.1564104185450546, 0.037], (2.58360082364361, 0, 0)],
-        [[-0.3976044010339124, 1.0893594478041397, 0.037], (-2.754958729796479, 0, 0)],
-        [[-0.1321745391351034, -0.9770563466538994, 0.037], (0.023420247684303064, 0, 0)],
-        [[1.189608329611025, -1.2149901031978512, 0.037], (-1.4326636437711433, 0, 0)],
-        [[1.1843340590839624, 0.6489511780891453, 0.037], (-2.7217380449807287, 0, 0)],
-        [[-0.9809657999484062, -1.1083365505927707, 0.037], (-2.3345794598554583, 0, 0)],
-        [[-1.2784507744439655, 1.1563774529015864, 0.037], (-2.8678152000933483, 0, 0)],
-        [[0.3901496399704625, -1.1792528983328467, 0.037], (-2.8105401591253365, 0, 0)],
-        [[0.5295369882192718, -0.048522756432280524, 0.037], (-1.9326942828271183, 0, 0)],
-        [[-0.8163314357118288, 0.5397625262462665, 0.037], (-2.3632722586621946, 0, 0)],
-        [[-1.4440228275011915, 0.5950118407108472, 0.037], (2.844069225037062, 0, 0)],
-        [[-0.9717158259496884, -0.17725332468788485, 0.037], (2.6805053622515524, 0, 0)],
-        [[1.3746156462656327, 0.3243695319666146, 0.037], (2.9971230213214586, 0, 0)],
-        [[0.7166395097945886, -0.5432170821274869, 0.037], (2.8906049897710853, 0, 0)],
-        [[0.9799829389026341, -1.1038280412639894, 0.037], (0.5392770690598683, 0, 0)],
-        [[1.447334112732503, -0.054869621891055646, 0.037], (2.840217621548317, 0, 0)],
-        [[0.3969496803873026, 0.6705457436227908, 0.037], (-1.6546259538828734, 0, 0)],
-        [[-1.577377266536482, -0.010517420061427961, 0.037], (0.08687158123064265, 0, 0)],
-        [[0.39517946402002524, 0.9582565724942487, 0.037], (0.48617744867462065, 0, 0)],
-        [[1.4615278206951483, 0.37838995693288574, 0.037], (-0.016440360512703478, 0, 0)],
-        [[-1.5560066353466409, 0.7129815818688116, 0.037], (1.9695152074870137, 0, 0)],]
+        self.starting_locations = startLocations.startLocations
+
 
         self.screen_segments = screen_segments
         self.camera = Camera(screen_segments=self.screen_segments, add_bottom_segment=add_bottom_segment, physical=physical)
         if self.physical:
             self.rob.set_phone_tilt(110, 100)
         else:
-            self.rob.set_phone_tilt(1/5*math.pi, 100)
+            self.rob.set_phone_tilt(1/4*math.pi, 100)
 
 
         
@@ -172,10 +152,25 @@ class BetaRobot:
     def readCamera(self, debug=True):
         """Function used to read and transform the IR"""
         image = self.rob.get_image_front()
-        mask_ratio, blobs = self.camera.getBlobs(image)
+        if self.physical:
+            image = cv2.flip(image, 0)
+        
+        self.foodIsInGrip = self.camera.hasSecuredFood(image)
+
+        if self.foodIsInGrip == True:
+            mask_ratio, blobs = self.camera.getBlobs(image, mode="green")
+        else:
+            mask_ratio, blobs = self.camera.getBlobs(image, mode="red")
+
+
         self.mask_ratio = mask_ratio
         camera_area = self.camera.getCameraArea(blobs)
-        return camera_area
+        
+        if not self.generalist:
+            if self.foodIsInGrip:
+                camera_area += (self.screen_segments + 1)
+
+        return camera_area, self.foodIsInGrip
 
 
     def normalizeIRVector(self, vector):
@@ -186,8 +181,17 @@ class BetaRobot:
     
     def getFitness(self):
         """ Get current fitness of the robot """
-        fitness = self.mask_ratio * 8 + self.isNewFoodCollected() * 100
+        fitness = (self.mask_ratio * 16) + (self.isFoodAtBase() * 100) + (self.foodIsInGrip * 4) 
+        """
+        print(self.mask_ratio * 16)
+        print(self.isFoodAtBase() * 100)
+        print(self.foodIsInGrip * 4)
+        """
         return fitness
+    
+    def isFoodAtBase(self):
+        self.foodIsAtBase = self.rob.base_detects_food()
+        return self.foodIsAtBase
     
     def isNewFoodCollected(self):
         amount = self.rob.collected_food()
@@ -221,11 +225,14 @@ class BetaRobot:
         self.rob.wait_for_stop()
 
         # Randomize location and angle of robot by randomzing location and angle of the environment
-        location, angle = random.choice(self.starting_locations)
-        self.setStartLocation(location)
-        self.setStartAngle(angle)
-        print(f"[{location}, {angle}],")
+        location_robot, location_food, location_base = random.choice(self.starting_locations)
+        self.setStartLocation(location_robot)
+        self.randomizeStartAngle()
+        self.setLocation(self.foodHandle, location_food)
+        self.setLocation(self.baseHandle, location_base)
         self.startSimulation()
+        print(f"[{location_robot}, {location_food}, {location_base}],")
+
         
         # Reset variables
         self.lastSpeed = (0, 0)
@@ -238,7 +245,7 @@ class BetaRobot:
         if self.physical:
             self.rob.set_phone_tilt(110, 100)
         else:
-            self.rob.set_phone_tilt(1/5*math.pi, 100)
+            self.rob.set_phone_tilt(1/4*math.pi, 100)
             
         for i in range(2):
             self.makeMove("stop", dontIterate=True)
@@ -257,7 +264,7 @@ class BetaRobot:
     
     def randomizeStartAngle(self):
         """ Function used to randomize the angle of the environment """
-        random_euler_angles = (random.uniform(-math.pi, math.pi) , 0, 0)
+        random_euler_angles = (random.uniform(0, math.pi) , 0, 0)
         self.setStartAngle(random_euler_angles)
         return random_euler_angles
     
@@ -265,6 +272,10 @@ class BetaRobot:
     def setStartLocation(self, location):
         """ Function used to randomize the location of the environment """
         vrep.unwrap_vrep(vrep.simxSetObjectPosition(self.rob._clientID, self.robotID, -1, location, vrep.simx_opmode_blocking))
+    
+    def setLocation(self, handle, location):
+        """ Function used to randomize the location of the environment """
+        vrep.unwrap_vrep(vrep.simxSetObjectPosition(self.rob._clientID, handle, -1, location, vrep.simx_opmode_blocking))
     
     def setStartAngle(self, angles, mode="world"):
         """ Function used to randomize the location of the environment """
